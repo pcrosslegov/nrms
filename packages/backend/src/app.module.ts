@@ -8,6 +8,7 @@ import { ReferenceDataModule } from './reference-data/reference-data.module';
 import { ReleasesModule } from './releases/releases.module';
 import { DocumentsModule } from './documents/documents.module';
 import { AuditModule } from './audit/audit.module';
+import { WorkflowModule } from './workflow/workflow.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuditModule } from './audit/audit.module';
     ReleasesModule,
     DocumentsModule,
     AuditModule,
+    WorkflowModule,
   ],
 })
 export class AppModule {}

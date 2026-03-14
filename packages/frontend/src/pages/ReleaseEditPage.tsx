@@ -13,6 +13,7 @@ import {
 } from '../api/releases';
 import { useMinistries, useSectors, useThemes, useTags } from '../api/reference-data';
 import RichTextEditor from '../components/RichTextEditor';
+import WorkflowActions from '../components/WorkflowActions';
 import MultiSelect from '../components/MultiSelect';
 import AuditLog from '../components/AuditLog';
 
@@ -452,6 +453,10 @@ export default function ReleaseEditPage() {
             onChange={setSelectedTags}
             loading={tags.isLoading}
           />
+
+          {/* Audit log */}
+          {/* Workflow */}
+          <WorkflowActions release={release} />
 
           {/* Audit log */}
           <div>
