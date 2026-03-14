@@ -12,6 +12,7 @@ import { WorkflowModule } from './workflow/workflow.module';
 import { StorageModule } from './storage/storage.module';
 import { ImagesModule } from './images/images.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
     StorageModule,
     ImagesModule,
     IntegrationsModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

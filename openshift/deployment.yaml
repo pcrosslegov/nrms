@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nrms
+  labels:
+    app: nrms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nrms
+  template:
+    metadata:
+      labels:
+        app: nrms
+    spec:
+      containers:
+        - name: nrms
+          image: image-registry.openshift-image-registry.svc:5000/nrms/nrms:latest
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nrms-secrets
+                  key: database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: nrms-secrets
+                  key: jwt-secret
+            - name: NODE_ENV
+              value: production
+            - name: STORAGE_PATH
+              value: /app/uploads
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: nrms-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nrms
+  labels:
+    app: nrms
+spec:
+  selector:
+    app: nrms
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nrms
+  labels:
+    app: nrms
+spec:
+  to:
+    kind: Service
+    name: nrms
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
