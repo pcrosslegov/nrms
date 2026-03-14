@@ -10,8 +10,8 @@ services:
     plan: free
     runtime: node
     buildCommand: |
-      cd packages/frontend && npm install && npm run build &&
-      cd ../../packages/backend && npm install && npx prisma generate && npm run build &&
+      cd packages/frontend && npm install --include=dev && npm run build &&
+      cd ../../packages/backend && npm install --include=dev && npx prisma generate && npm run build &&
       cp -r ../frontend/dist ./public
     startCommand: cd packages/backend && npx prisma migrate deploy && npx ts-node prisma/seed-if-empty.ts && node dist/main.js
     envVars:
