@@ -5,6 +5,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { createAzureAdStrategy } from './azure-ad.strategy';
+import { PrismaService } from '../prisma/prisma.service';
+
+const AzureAdStrategyProvider = {
+  provide: 'AZURE_AD_STRATEGY',
+  inject: [ConfigService, PrismaService],
+  useFactory: (config: ConfigService, prisma: PrismaService) => {
+    return createAzureAdStrategy(config, prisma);
+  },
+};
 
 @Module({
   imports: [
@@ -18,7 +28,7 @@ import { JwtStrategy } from './jwt.strategy';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, AzureAdStrategyProvider],
   controllers: [AuthController],
   exports: [AuthService],
 })

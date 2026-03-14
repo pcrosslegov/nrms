@@ -13,7 +13,6 @@ import { WorkflowService } from './workflow.service';
 import { GenerationService } from '../generation/generation.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@UseGuards(JwtAuthGuard)
 @Controller('releases/:id/workflow')
 export class WorkflowController {
   constructor(
@@ -21,11 +20,13 @@ export class WorkflowController {
     private generation: GenerationService,
   ) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('approve')
   approve(@Param('id') id: string, @Request() req: any) {
     return this.workflow.approve(id, req.user.userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('schedule')
   schedule(
     @Param('id') id: string,
@@ -35,16 +36,19 @@ export class WorkflowController {
     return this.workflow.schedule(id, body.publishDateTime, req.user.userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('publish')
   publish(@Param('id') id: string, @Request() req: any) {
     return this.workflow.publish(id, req.user.userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('unpublish')
   unpublish(@Param('id') id: string, @Request() req: any) {
     return this.workflow.unpublish(id, req.user.userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('preview')
   preview(@Param('id') id: string) {
     return this.workflow.preview(id);
