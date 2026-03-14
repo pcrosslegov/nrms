@@ -18,8 +18,8 @@ import { HealthModule } from './health/health.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
-      exclude: ['/api/(.*)'],
+      rootPath: join(__dirname, '..', '..', 'public'),
+      exclude: ['/api/{*path}'],
     }),
     PrismaModule,
     AuthModule,
