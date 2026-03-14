@@ -6,26 +6,44 @@ This document describes what remains to make NRMS a full end-to-end production s
 
 ## 1. Authentication & Authorization
 
-### Keycloak SSO Integration
+### Azure AD SSO — Implemented
 
-**Current state**: Local JWT auth with email/password registration and login. Works for development but not suitable for production.
+**Current state**: Dual authentication is fully implemented. The system accepts both Azure AD Bearer tokens and local JWT tokens simultaneously. All protected endpoints work with either auth method.
 
-**What's needed**:
-- Provision a Keycloak server (or connect to an existing instance)
-- Configure a realm and OIDC client for NRMS
-- Replace `JwtStrategy` in `src/auth/jwt.strategy.ts` with a Keycloak/OIDC strategy (the module is designed for this swap)
-- Map Keycloak groups/roles to application permissions
-- Environment variables are already stubbed in `.env.example` (`KEYCLOAK_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`)
+**Backend** (`src/auth/`):
+- `AzureAdStrategy` validates tokens against Azure AD's OIDC endpoint using `passport-azure-ad`
+- Conditionally registered — when `AZURE_AD_TENANT_ID` and `AZURE_AD_CLIENT_ID` are not set, the strategy is skipped and only local JWT auth is active
+- `JwtAuthGuard` tries both strategies; succeeds if either one validates
+- Users are auto-provisioned in the database on first Azure AD login (email + display name from token claims)
+- `GET /api/auth/config` tells the frontend which auth methods are available
 
-### Role-Based Access Control
+**Frontend** (`src/api/auth.tsx`, `src/pages/LoginPage.tsx`):
+- Fetches `/api/auth/config` on mount to determine available login methods
+- When Azure AD is enabled: shows "Sign in with Microsoft" button above a divider, with local email/password form below
+- When Azure AD is not configured: shows only the local login form
+- Uses `@azure/msal-browser` for OAuth popup flow
 
-**Current state**: Any authenticated user can perform any action — create, approve, publish, manage reference data.
+**To enable in production**:
+1. Register an App Registration in your Azure AD tenant (portal.azure.com → App registrations)
+2. Set the platform to SPA with redirect URI pointing to your NRMS URL
+3. Set environment variables:
+   ```
+   AZURE_AD_TENANT_ID=your-tenant-guid
+   AZURE_AD_CLIENT_ID=your-app-client-id
+   AZURE_AD_REDIRECT_URI=https://nrms.your-domain.com
+   ```
+4. Optionally configure App Roles in the Azure AD manifest for role-based access
+
+### Role-Based Access Control — Not Yet Implemented
+
+**Current state**: Any authenticated user (Azure AD or local) can perform any action — create, approve, publish, manage reference data.
 
 **What's needed**:
 - Define roles: Editor, Approver, Publisher, Admin
 - Add a role guard that checks the user's role before allowing workflow actions (e.g. only Approvers can approve, only Publishers can publish)
 - Ministry-scoped permissions (users should only edit releases for their assigned ministry)
-- Role assignment UI or Keycloak group mapping
+- Map Azure AD App Roles or Groups to application roles, and/or add a role field to the `User` model for local accounts
+- Admin UI for managing local user roles
 
 ---
 
@@ -33,7 +51,7 @@ This document describes what remains to make NRMS a full end-to-end production s
 
 ### S3/MinIO Object Storage Backend
 
-**Current state**: `StorageService` in `src/storage/storage.service.ts` writes to the local filesystem (`STORAGE_PATH` env var). Works for development.
+**Current state**: `StorageService` in `src/storage/storage.service.ts` writes to the local filesystem (`STORAGE_PATH` env var). Works for development and single-server deployments.
 
 **What's needed**:
 - Implement an S3-compatible storage backend using `@aws-sdk/client-s3` (or MinIO client)
@@ -147,10 +165,10 @@ All integration services exist as stubs with the correct interfaces. They log th
 **Current state**: Migration script is written and handles:
 - Ministries, Sectors, Themes, Tags (reference data)
 - News Releases with type mapping and PublishOptions bitmask → boolean conversion
-- Release language content (EN/FR)
+- Release language content (EN/FR) with LCID → `en`/`fr` mapping
 - Documents and document language content
 - Audit logs
-- Search vector rebuild
+- Search vector rebuild across all migrated releases
 - Sequence sync (sets `news_reference_seq` to max existing NEWS-##### number)
 
 **What's needed**:
@@ -241,7 +259,7 @@ The legacy database has a `media` schema with ~30 tables (Company, Contact, Medi
 
 **What's needed**:
 - Playwright or Cypress tests covering:
-  - Login flow
+  - Login flow (both local and Azure AD)
   - Create and edit a release
   - Rich text editor functionality
   - Workflow button state transitions
@@ -263,11 +281,12 @@ The legacy database has a `media` schema with ~30 tables (Company, Contact, Medi
 
 The minimum required to go live, in priority order:
 
-1. **Keycloak SSO** — or keep local auth temporarily with role guards added for approve/publish
-2. **Real SMTP relay** — configure `SMTP_HOST` so email distribution works
-3. **S3 storage backend** — implement the S3 client in `StorageService` for OpenShift
-4. **Run data migration** — connect to legacy SQL Server and migrate releases + reference data
-5. **Deploy to OpenShift** — push image, create secrets, apply manifests, run migrations
-6. **Blob/image migration** — extract legacy images from SQL Server `Blob` table to S3
+1. **Azure AD App Registration** — register the app in your Azure AD tenant, set the 3 env vars, and SSO works immediately. Local auth remains available alongside it
+2. **Role-based access control** — add role guards so not every user can approve/publish
+3. **Real SMTP relay** — configure `SMTP_HOST` so email distribution works
+4. **S3 storage backend** — implement the S3 client in `StorageService` for OpenShift persistent file storage
+5. **Run data migration** — connect to legacy SQL Server and migrate releases + reference data
+6. **Deploy to OpenShift** — push image, create secrets, apply manifests, run migrations
+7. **Blob/image migration** — extract legacy images from SQL Server `Blob` table to S3
 
 The Flickr integration, NOD subscriber database, and media contact counts can follow as a fast-follow since the legacy system can run in parallel during the transition period.
