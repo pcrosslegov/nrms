@@ -14,6 +14,7 @@ import {
 import { useMinistries, useSectors, useThemes, useTags } from '../api/reference-data';
 import RichTextEditor from '../components/RichTextEditor';
 import WorkflowActions from '../components/WorkflowActions';
+import ImageUpload from '../components/ImageUpload';
 import MultiSelect from '../components/MultiSelect';
 import AuditLog from '../components/AuditLog';
 
@@ -455,6 +456,9 @@ export default function ReleaseEditPage() {
           />
 
           {/* Audit log */}
+          {/* Images */}
+          <ImageUpload releaseId={release.id} />
+
           {/* Workflow */}
           <WorkflowActions release={release} />
 

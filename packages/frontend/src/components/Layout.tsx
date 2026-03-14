@@ -4,6 +4,7 @@ import { useAuth } from '../api/auth';
 const navItems = [
   { to: '/', label: 'Dashboard' },
   { to: '/releases', label: 'Releases' },
+  { to: '/search', label: 'Search' },
 ];
 
 export default function Layout() {

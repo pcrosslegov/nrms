@@ -9,6 +9,9 @@ import { ReleasesModule } from './releases/releases.module';
 import { DocumentsModule } from './documents/documents.module';
 import { AuditModule } from './audit/audit.module';
 import { WorkflowModule } from './workflow/workflow.module';
+import { StorageModule } from './storage/storage.module';
+import { ImagesModule } from './images/images.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { WorkflowModule } from './workflow/workflow.module';
     DocumentsModule,
     AuditModule,
     WorkflowModule,
+    StorageModule,
+    ImagesModule,
+    IntegrationsModule,
   ],
 })
 export class AppModule {}
