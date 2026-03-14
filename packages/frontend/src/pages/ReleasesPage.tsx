@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReleases, useCreateRelease, type Release } from '../api/releases';
+import { useAuth } from '../api/auth';
 
 const tabs = [
   { key: 'drafts', label: 'Drafts' },
@@ -31,18 +32,22 @@ export default function ReleasesPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useReleases(activeTab, page);
   const createRelease = useCreateRelease();
+  const { user } = useAuth();
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'EDITOR';
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Releases</h2>
-        <button
-          onClick={() => createRelease.mutate({}, { onSuccess: (r) => navigate(`/releases/${r.id}`) })}
-          disabled={createRelease.isPending}
-          className="px-4 py-2 bg-[#003366] text-white text-sm font-medium rounded-md hover:bg-[#002244] transition-colors disabled:opacity-50"
-        >
-          + New Release
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => createRelease.mutate({}, { onSuccess: (r) => navigate(`/releases/${r.id}`) })}
+            disabled={createRelease.isPending}
+            className="px-4 py-2 bg-[#003366] text-white text-sm font-medium rounded-md hover:bg-[#002244] transition-colors disabled:opacity-50"
+          >
+            + New Release
+          </button>
+        )}
       </div>
 
       {/* Tabs */}

@@ -6,6 +6,7 @@ import {
   useUnpublish,
   usePreview,
 } from '../api/workflow';
+import { useAuth } from '../api/auth';
 import type { Release } from '../api/releases';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export default function WorkflowActions({ release }: Props) {
+  const { user } = useAuth();
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'EDITOR';
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [showPreview, setShowPreview] = useState(false);
@@ -35,7 +38,7 @@ export default function WorkflowActions({ release }: Props) {
 
       <div className="flex flex-wrap gap-2">
         {/* Approve — only if not yet approved */}
-        {!isApproved && (
+        {canEdit && !isApproved && (
           <button
             onClick={() => {
               if (confirm('Approve this release? This will assign a NEWS reference number.')) {
@@ -50,7 +53,7 @@ export default function WorkflowActions({ release }: Props) {
         )}
 
         {/* Schedule — only if approved and not published */}
-        {isApproved && !isPublished && (
+        {canEdit && isApproved && !isPublished && (
           <>
             <button
               onClick={() => setShowSchedule(!showSchedule)}
@@ -75,7 +78,7 @@ export default function WorkflowActions({ release }: Props) {
         )}
 
         {/* Unpublish / Cancel — if committed or published */}
-        {(isScheduled || isPublished) && (
+        {canEdit && (isScheduled || isPublished) && (
           <button
             onClick={() => {
               const msg = isPublished

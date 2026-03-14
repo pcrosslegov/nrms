@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -18,7 +19,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await this.prisma.user.create({
-      data: { email, passwordHash, displayName },
+      data: { email, passwordHash, displayName, role: Role.VIEWER },
     });
 
     return this.issueToken(user.id, user.email);
@@ -41,7 +42,7 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, displayName: true, isActive: true },
+      select: { id: true, email: true, displayName: true, role: true, isActive: true },
     });
     return user;
   }

@@ -12,6 +12,7 @@ export class PrismaService
   async onModuleInit() {
     await this.$connect();
     await this.seedIfEmpty();
+    await this.ensureAdminRole();
   }
 
   async onModuleDestroy() {
@@ -74,9 +75,18 @@ export class PrismaService
     await this.user.upsert({
       where: { email: 'admin@nrms.local' },
       update: {},
-      create: { email: 'admin@nrms.local', displayName: 'Admin', passwordHash },
+      create: { email: 'admin@nrms.local', displayName: 'Admin', passwordHash, role: 'ADMIN' },
     });
 
     this.logger.log('Seed completed');
+  }
+
+  private async ensureAdminRole() {
+    const passwordHash = await bcrypt.hash('admin123!', 10);
+    await this.user.upsert({
+      where: { email: 'admin@nrms.local' },
+      update: { role: 'ADMIN' },
+      create: { email: 'admin@nrms.local', displayName: 'Admin', passwordHash, role: 'ADMIN' },
+    });
   }
 }

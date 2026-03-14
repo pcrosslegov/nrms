@@ -12,6 +12,7 @@ import {
   type ReleaseDocument,
 } from '../api/releases';
 import { useMinistries, useSectors, useThemes, useTags } from '../api/reference-data';
+import { useAuth } from '../api/auth';
 import RichTextEditor from '../components/RichTextEditor';
 import WorkflowActions from '../components/WorkflowActions';
 import ImageUpload from '../components/ImageUpload';
@@ -206,6 +207,8 @@ function DocumentEditor({
 export default function ReleaseEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'EDITOR';
   const { data: release, isLoading } = useRelease(id!);
   const updateRelease = useUpdateRelease(id!);
   const updateAssociations = useUpdateAssociations(id!);
@@ -306,13 +309,15 @@ export default function ReleaseEditPage() {
           >
             {release.isPublished ? 'Published' : release.isCommitted ? 'Scheduled' : 'Draft'}
           </span>
-          <button
-            onClick={saveMetadata}
-            disabled={updateRelease.isPending}
-            className="px-4 py-2 bg-[#003366] text-white text-sm font-medium rounded-md hover:bg-[#002244] disabled:opacity-50"
-          >
-            {updateRelease.isPending ? 'Saving...' : 'Save Metadata'}
-          </button>
+          {canEdit && (
+            <button
+              onClick={saveMetadata}
+              disabled={updateRelease.isPending}
+              className="px-4 py-2 bg-[#003366] text-white text-sm font-medium rounded-md hover:bg-[#002244] disabled:opacity-50"
+            >
+              {updateRelease.isPending ? 'Saving...' : 'Save Metadata'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -323,12 +328,14 @@ export default function ReleaseEditPage() {
             <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
               Documents
             </h3>
-            <button
-              onClick={() => createDocument.mutate()}
-              className="text-sm text-[#003366] hover:underline"
-            >
-              + Add document
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => createDocument.mutate()}
+                className="text-sm text-[#003366] hover:underline"
+              >
+                + Add document
+              </button>
+            )}
           </div>
 
           {release.documents?.map((doc) => (

@@ -14,8 +14,11 @@ import {
 import { ReleaseType } from '@prisma/client';
 import { ReleasesService } from './releases.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '../auth/roles.enum';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('releases')
 export class ReleasesController {
   constructor(private releases: ReleasesService) {}
@@ -44,16 +47,19 @@ export class ReleasesController {
     return this.releases.findOne(id);
   }
 
+  @Roles(Role.ADMIN, Role.EDITOR)
   @Post()
   create(@Body() body: { releaseType?: ReleaseType; ministryId?: string }) {
     return this.releases.create(body);
   }
 
+  @Roles(Role.ADMIN, Role.EDITOR)
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: any) {
     return this.releases.update(id, body);
   }
 
+  @Roles(Role.ADMIN, Role.EDITOR)
   @Put(':id/language/:langId')
   updateLanguage(
     @Param('id') id: string,
@@ -69,6 +75,7 @@ export class ReleasesController {
     return this.releases.updateLanguage(id, langId, body);
   }
 
+  @Roles(Role.ADMIN, Role.EDITOR)
   @Put(':id/associations')
   updateAssociations(
     @Param('id') id: string,
@@ -84,6 +91,7 @@ export class ReleasesController {
     return this.releases.updateAssociations(id, body);
   }
 
+  @Roles(Role.ADMIN, Role.EDITOR)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.releases.softDelete(id);

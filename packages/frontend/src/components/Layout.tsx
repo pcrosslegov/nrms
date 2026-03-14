@@ -1,14 +1,21 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../api/auth';
 
-const navItems = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/releases', label: 'Releases' },
-  { to: '/search', label: 'Search' },
-];
+const roleBadgeColors: Record<string, string> = {
+  ADMIN: 'bg-red-500/20 text-red-200',
+  EDITOR: 'bg-amber-500/20 text-amber-200',
+  VIEWER: 'bg-white/20 text-white/70',
+};
 
 export default function Layout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  const navItems = [
+    { to: '/', label: 'Dashboard' },
+    { to: '/releases', label: 'Releases' },
+    { to: '/search', label: 'Search' },
+    ...(user?.role === 'ADMIN' ? [{ to: '/admin/users', label: 'Users' }] : []),
+  ];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -35,12 +42,22 @@ export default function Layout() {
               ))}
             </nav>
           </div>
-          <button
-            onClick={logout}
-            className="text-sm text-white/70 hover:text-white transition-colors"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-3">
+            {user && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-white/80">{user.displayName}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${roleBadgeColors[user.role] ?? ''}`}>
+                  {user.role}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={logout}
+              className="text-sm text-white/70 hover:text-white transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">

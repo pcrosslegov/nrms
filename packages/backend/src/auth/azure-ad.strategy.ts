@@ -61,7 +61,7 @@ export function createAzureAdStrategy(config: ConfigService, prisma: PrismaServi
         return null;
       }
 
-      return { userId: user.id, email: user.email };
+      return { userId: user.id, email: user.email, role: user.role };
     }
   }
 

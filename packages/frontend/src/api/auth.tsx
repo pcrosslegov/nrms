@@ -14,8 +14,16 @@ interface AuthConfig {
   localAuth: { enabled: boolean };
 }
 
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  role: 'ADMIN' | 'EDITOR' | 'VIEWER';
+}
+
 interface AuthCtx {
   token: string | null;
+  user: User | null;
   authConfig: AuthConfig | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithAzure: () => Promise<void>;
@@ -29,6 +37,7 @@ const defaultConfig: AuthConfig = {
 
 const AuthContext = createContext<AuthCtx>({
   token: null,
+  user: null,
   authConfig: null,
   login: async () => {},
   loginWithAzure: async () => {},
@@ -41,7 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(
     () => localStorage.getItem('nrms_token'),
   );
+  const [user, setUser] = useState<User | null>(null);
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const profile = await api<User>('/api/auth/profile');
+      setUser(profile);
+    } catch {
+      setUser(null);
+    }
+  }, []);
+
+  // Fetch profile when token is set
+  useEffect(() => {
+    if (token) {
+      fetchProfile();
+    } else {
+      setUser(null);
+    }
+  }, [token, fetchProfile]);
 
   // Fetch auth config on mount
   useEffect(() => {
@@ -102,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem('nrms_token');
     setToken(null);
+    setUser(null);
 
     if (msalInstance) {
       const accounts = msalInstance.getAllAccounts();
@@ -112,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, authConfig, login, loginWithAzure, logout }}>
+    <AuthContext.Provider value={{ token, user, authConfig, login, loginWithAzure, logout }}>
       {children}
     </AuthContext.Provider>
   );
