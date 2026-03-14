@@ -96,11 +96,14 @@ export class ReleasesService {
     releaseType?: ReleaseType;
     ministryId?: string;
   }) {
+    // Generate a temporary unique key (replaced on Approve with proper slug)
+    const tempKey = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     const release = await this.prisma.newsRelease.create({
       data: {
         releaseType: data.releaseType ?? ReleaseType.RELEASE,
+        key: tempKey,
         ministryId: data.ministryId,
-        // Create default EN document
         documents: {
           create: {
             sortIndex: 0,
@@ -143,7 +146,101 @@ export class ReleasesService {
           ? new Date(data.releaseDateTime)
           : undefined,
       },
+      include: { ministry: true },
     });
+  }
+
+  async updateLanguage(
+    releaseId: string,
+    languageId: string,
+    data: {
+      location?: string;
+      summary?: string;
+      socialMediaHeadline?: string;
+      socialMediaSummary?: string;
+    },
+  ) {
+    return this.prisma.newsReleaseLanguage.upsert({
+      where: {
+        releaseId_languageId: { releaseId, languageId },
+      },
+      update: data,
+      create: { releaseId, languageId, ...data },
+    });
+  }
+
+  async updateAssociations(
+    id: string,
+    data: {
+      ministryIds?: string[];
+      sectorIds?: string[];
+      themeIds?: string[];
+      tagIds?: string[];
+      mediaDistributionListIds?: string[];
+    },
+  ) {
+    const ops: any[] = [];
+
+    if (data.ministryIds !== undefined) {
+      ops.push(
+        this.prisma.newsReleaseMinistry.deleteMany({ where: { releaseId: id } }),
+        ...data.ministryIds.map((ministryId) =>
+          this.prisma.newsReleaseMinistry.create({
+            data: { releaseId: id, ministryId },
+          }),
+        ),
+      );
+    }
+
+    if (data.sectorIds !== undefined) {
+      ops.push(
+        this.prisma.newsReleaseSector.deleteMany({ where: { releaseId: id } }),
+        ...data.sectorIds.map((sectorId) =>
+          this.prisma.newsReleaseSector.create({
+            data: { releaseId: id, sectorId },
+          }),
+        ),
+      );
+    }
+
+    if (data.themeIds !== undefined) {
+      ops.push(
+        this.prisma.newsReleaseTheme.deleteMany({ where: { releaseId: id } }),
+        ...data.themeIds.map((themeId) =>
+          this.prisma.newsReleaseTheme.create({
+            data: { releaseId: id, themeId },
+          }),
+        ),
+      );
+    }
+
+    if (data.tagIds !== undefined) {
+      ops.push(
+        this.prisma.newsReleaseTag.deleteMany({ where: { releaseId: id } }),
+        ...data.tagIds.map((tagId) =>
+          this.prisma.newsReleaseTag.create({
+            data: { releaseId: id, tagId },
+          }),
+        ),
+      );
+    }
+
+    if (data.mediaDistributionListIds !== undefined) {
+      ops.push(
+        this.prisma.newsReleaseMediaDistribution.deleteMany({ where: { releaseId: id } }),
+        ...data.mediaDistributionListIds.map((mediaDistributionListId) =>
+          this.prisma.newsReleaseMediaDistribution.create({
+            data: { releaseId: id, mediaDistributionListId },
+          }),
+        ),
+      );
+    }
+
+    if (ops.length > 0) {
+      await this.prisma.$transaction(ops);
+    }
+
+    return this.findOne(id);
   }
 
   async softDelete(id: string) {

@@ -2,11 +2,13 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Param,
   Body,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { ReleaseType } from '@prisma/client';
@@ -50,6 +52,36 @@ export class ReleasesController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: any) {
     return this.releases.update(id, body);
+  }
+
+  @Put(':id/language/:langId')
+  updateLanguage(
+    @Param('id') id: string,
+    @Param('langId') langId: string,
+    @Body()
+    body: {
+      location?: string;
+      summary?: string;
+      socialMediaHeadline?: string;
+      socialMediaSummary?: string;
+    },
+  ) {
+    return this.releases.updateLanguage(id, langId, body);
+  }
+
+  @Put(':id/associations')
+  updateAssociations(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      ministryIds?: string[];
+      sectorIds?: string[];
+      themeIds?: string[];
+      tagIds?: string[];
+      mediaDistributionListIds?: string[];
+    },
+  ) {
+    return this.releases.updateAssociations(id, body);
   }
 
   @Delete(':id')

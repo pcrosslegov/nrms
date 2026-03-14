@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useReleases, useCreateRelease, type Release } from '../api/releases';
 
 const tabs = [
@@ -25,6 +26,7 @@ function releaseHeadline(r: Release): string {
 }
 
 export default function ReleasesPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]['key']>('drafts');
   const [page, setPage] = useState(1);
   const { data, isLoading } = useReleases(activeTab, page);
@@ -35,7 +37,7 @@ export default function ReleasesPage() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Releases</h2>
         <button
-          onClick={() => createRelease.mutate({})}
+          onClick={() => createRelease.mutate({}, { onSuccess: (r) => navigate(`/releases/${r.id}`) })}
           disabled={createRelease.isPending}
           className="px-4 py-2 bg-[#003366] text-white text-sm font-medium rounded-md hover:bg-[#002244] transition-colors disabled:opacity-50"
         >
@@ -85,7 +87,7 @@ export default function ReleasesPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data.items.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                  <tr key={r.id} onClick={() => navigate(`/releases/${r.id}`)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                     <td className="px-4 py-3 font-medium">{releaseHeadline(r)}</td>
                     <td className="px-4 py-3">
                       <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">

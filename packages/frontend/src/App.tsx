@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ReleasesPage from './pages/ReleasesPage';
+import ReleaseEditPage from './pages/ReleaseEditPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -25,6 +26,7 @@ export default function App() {
         >
           <Route path="/" element={<DashboardPage />} />
           <Route path="/releases" element={<ReleasesPage />} />
+          <Route path="/releases/:id" element={<ReleaseEditPage />} />
         </Route>
       </Routes>
     </AuthProvider>
