@@ -1,0 +1,396 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Reference Data ─────────────────────────────────────────────────────────
+
+model Language {
+  id        String @id @db.VarChar(5) // "en" or "fr"
+  name      String @db.VarChar(50)
+  sortOrder Int    @default(0)
+
+  ministryLanguages  MinistryLanguage[]
+  sectorLanguages    SectorLanguage[]
+  releaseLanguages   NewsReleaseLanguage[]
+  documentLanguages  NewsReleaseDocumentLanguage[]
+  documentContacts   NewsReleaseDocumentContact[]
+  imageLanguages     NewsReleaseImageLanguage[]
+
+  @@map("language")
+}
+
+model Ministry {
+  id           String  @id @default(uuid()) @db.Uuid
+  key          String  @unique @db.VarChar(100)
+  displayName  String  @unique @db.VarChar(255)
+  abbreviation String  @unique @db.VarChar(10)
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  languages            MinistryLanguage[]
+  sectors              MinistrySector[]
+  newsReleases         NewsRelease[]       @relation("ministry")
+  newsReleaseMinistries NewsReleaseMinistry[]
+
+  @@map("ministry")
+}
+
+model MinistryLanguage {
+  ministryId String   @db.Uuid
+  languageId String   @db.VarChar(5)
+  name       String   @db.VarChar(100)
+
+  ministry Ministry @relation(fields: [ministryId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@id([ministryId, languageId])
+  @@map("ministry_language")
+}
+
+model Sector {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique @db.VarChar(100)
+  displayName String? @db.VarChar(255)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  languages          SectorLanguage[]
+  ministries         MinistrySector[]
+  newsReleaseSectors NewsReleaseSector[]
+
+  @@map("sector")
+}
+
+model SectorLanguage {
+  sectorId   String @db.Uuid
+  languageId String @db.VarChar(5)
+  name       String @db.VarChar(50)
+
+  sector   Sector   @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@id([sectorId, languageId])
+  @@map("sector_language")
+}
+
+model MinistrySector {
+  ministryId String @db.Uuid
+  sectorId   String @db.Uuid
+
+  ministry Ministry @relation(fields: [ministryId], references: [id], onDelete: Cascade)
+  sector   Sector   @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+
+  @@id([ministryId, sectorId])
+  @@map("ministry_sector")
+}
+
+model Theme {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique @db.VarChar(255)
+  displayName String? @db.VarChar(255)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  newsReleaseThemes NewsReleaseTheme[]
+
+  @@map("theme")
+}
+
+model Tag {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique @db.VarChar(255)
+  displayName String? @db.VarChar(255)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  newsReleaseTags NewsReleaseTag[]
+
+  @@map("tag")
+}
+
+model Service {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique @db.VarChar(255)
+  displayName String? @db.VarChar(255)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  @@map("service")
+}
+
+model MediaDistributionList {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique @db.VarChar(50)
+  displayName String  @db.VarChar(50)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  newsReleaseDistributions NewsReleaseMediaDistribution[]
+
+  @@map("media_distribution_list")
+}
+
+// ─── Core Release Tables ────────────────────────────────────────────────────
+
+enum ReleaseType {
+  RELEASE
+  STORY
+  FACTSHEET
+  UPDATE
+  ADVISORY
+
+  @@map("release_type")
+}
+
+model NewsRelease {
+  id          String      @id @default(uuid()) @db.Uuid
+  releaseType ReleaseType @default(RELEASE)
+  key         String      @default("") @db.VarChar(255)
+  reference   String      @default("") @db.VarChar(50)
+
+  year            Int?
+  yearRelease     Int?
+  ministryRelease Int?
+
+  ministryId String?   @db.Uuid
+  ministry   Ministry? @relation("ministry", fields: [ministryId], references: [id])
+
+  releaseDateTime DateTime? @db.Timestamptz
+  publishDateTime DateTime? @db.Timestamptz
+  isCommitted     Boolean   @default(false)
+  isPublished     Boolean   @default(false)
+  isActive        Boolean   @default(true)
+
+  // Replaces PublishOptions bitmask
+  publishToWeb        Boolean @default(true)
+  publishToNewsOnDemand Boolean @default(false)
+  publishToMediaDistribution Boolean @default(false)
+
+  hasMediaAssets  Boolean @default(false)
+  nodSubscribers  Int?
+  mediaSubscribers Int?
+
+  atomId      String @default("") @db.VarChar(255)
+  keywords    String @default("")
+  assetUrl    String @default("")
+  redirectUrl String @default("")
+
+  searchVector Unsupported("tsvector")?
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  documents     NewsReleaseDocument[]
+  languages     NewsReleaseLanguage[]
+  logs          NewsReleaseLog[]
+  images        NewsReleaseImage[]
+  history       NewsReleaseHistory[]
+  ministries    NewsReleaseMinistry[]
+  sectors       NewsReleaseSector[]
+  themes        NewsReleaseTheme[]
+  tags          NewsReleaseTag[]
+  distributions NewsReleaseMediaDistribution[]
+
+  @@unique([releaseType, key])
+  @@index([reference])
+  @@index([isActive, isPublished])
+  @@map("news_release")
+}
+
+model NewsReleaseLanguage {
+  releaseId           String @db.Uuid
+  languageId          String @db.VarChar(5)
+  location            String @default("") @db.VarChar(50)
+  summary             String @default("")
+  socialMediaHeadline String?
+  socialMediaSummary  String?
+
+  release  NewsRelease @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  language Language    @relation(fields: [languageId], references: [id])
+
+  @@id([releaseId, languageId])
+  @@map("news_release_language")
+}
+
+model NewsReleaseDocument {
+  id         String @id @default(uuid()) @db.Uuid
+  releaseId  String @db.Uuid
+  sortIndex  Int    @default(0)
+  pageLayout Int    @default(0)
+
+  release   NewsRelease                   @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  languages NewsReleaseDocumentLanguage[]
+  contacts  NewsReleaseDocumentContact[]
+
+  @@map("news_release_document")
+}
+
+model NewsReleaseDocumentLanguage {
+  documentId    String  @db.Uuid
+  languageId    String  @db.VarChar(5)
+  pageTitle     String  @default("") @db.VarChar(50)
+  organizations String  @default("") @db.VarChar(250)
+  headline      String  @default("") @db.VarChar(255)
+  subheadline   String  @default("") @db.VarChar(100)
+  byline        String  @default("") @db.VarChar(250)
+  bodyHtml      String  @default("")
+
+  document NewsReleaseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  language Language            @relation(fields: [languageId], references: [id])
+
+  @@id([documentId, languageId])
+  @@map("news_release_document_language")
+}
+
+model NewsReleaseDocumentContact {
+  documentId  String @db.Uuid
+  languageId  String @db.VarChar(5)
+  sortIndex   Int
+  information String @db.VarChar(250)
+
+  document NewsReleaseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  language Language            @relation(fields: [languageId], references: [id])
+
+  @@id([documentId, languageId, sortIndex])
+  @@map("news_release_document_contact")
+}
+
+model NewsReleaseLog {
+  id          Int      @id @default(autoincrement())
+  releaseId   String   @db.Uuid
+  dateTime    DateTime @default(now()) @db.Timestamptz
+  userId      String?  @db.Uuid
+  description String   @db.VarChar(200)
+
+  release NewsRelease @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@map("news_release_log")
+}
+
+model NewsReleaseImage {
+  id        String @id @default(uuid()) @db.Uuid
+  releaseId String @db.Uuid
+  sortOrder Int    @default(0)
+  fileName  String @db.VarChar(255)
+  mimeType  String @db.VarChar(100)
+  filePath  String @db.VarChar(500)
+
+  release   NewsRelease              @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  languages NewsReleaseImageLanguage[]
+
+  @@map("news_release_image")
+}
+
+model NewsReleaseImageLanguage {
+  imageId       String @db.Uuid
+  languageId    String @db.VarChar(5)
+  alternateName String @db.VarChar(100)
+
+  image    NewsReleaseImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  language Language         @relation(fields: [languageId], references: [id])
+
+  @@id([imageId, languageId])
+  @@map("news_release_image_language")
+}
+
+model NewsReleaseHistory {
+  releaseId       String   @db.Uuid
+  publishDateTime DateTime @db.Timestamptz
+  mimeType        String   @db.VarChar(100)
+  filePath        String   @db.VarChar(500)
+
+  release NewsRelease @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@id([releaseId, publishDateTime, mimeType])
+  @@map("news_release_history")
+}
+
+// ─── Many-to-Many Junction Tables ───────────────────────────────────────────
+
+model NewsReleaseMinistry {
+  releaseId  String @db.Uuid
+  ministryId String @db.Uuid
+
+  release  NewsRelease @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  ministry Ministry    @relation(fields: [ministryId], references: [id], onDelete: Cascade)
+
+  @@id([releaseId, ministryId])
+  @@map("news_release_ministry")
+}
+
+model NewsReleaseSector {
+  releaseId String @db.Uuid
+  sectorId  String @db.Uuid
+
+  release NewsRelease @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  sector  Sector      @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+
+  @@id([releaseId, sectorId])
+  @@map("news_release_sector")
+}
+
+model NewsReleaseTheme {
+  releaseId String @db.Uuid
+  themeId   String @db.Uuid
+
+  release NewsRelease @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  theme   Theme       @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@id([releaseId, themeId])
+  @@map("news_release_theme")
+}
+
+model NewsReleaseTag {
+  releaseId String @db.Uuid
+  tagId     String @db.Uuid
+
+  release NewsRelease @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  tag     Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([releaseId, tagId])
+  @@map("news_release_tag")
+}
+
+model NewsReleaseMediaDistribution {
+  releaseId              String @db.Uuid
+  mediaDistributionListId String @db.Uuid
+
+  release           NewsRelease           @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  mediaDistribution MediaDistributionList @relation(fields: [mediaDistributionListId], references: [id], onDelete: Cascade)
+
+  @@id([releaseId, mediaDistributionListId])
+  @@map("news_release_media_distribution")
+}
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique @db.VarChar(256)
+  displayName  String  @db.VarChar(256)
+  passwordHash String  @db.VarChar(255)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  @@map("user")
+}
+
+// ─── PostgreSQL Sequence for NEWS-##### ─────────────────────────────────────
+// Created via raw migration SQL: CREATE SEQUENCE news_reference_seq START 1;
